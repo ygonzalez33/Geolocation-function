@@ -101,6 +101,7 @@ The final result that the function will return is a list of the following variab
 > [!IMPORTANT]
 >* Before applying this function, please make sure you have created an API key from the following applications: [MapBox](https://www.mapbox.com/) and [TomTom](https://www.tomtom.com/en_gb/navigation/)
 >* Please note that `province` could also be interpret as a State and `block` as a neighborhood
+>* The are three ways an address can be input: country-province, country-province-city (default), and country-province-city-block
 >* The CRS used throughout the function is 4326 (WGS 84)
 >* The function may stop for cases when `filter_NA = FALSE`, because the `st_as_sf` function from the `sf` package cannot change NAs into coordinates since the API may not find the address
 >* Locations near the coast may have a value in _flag_box_ different from 0
