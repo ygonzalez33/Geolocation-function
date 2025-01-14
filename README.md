@@ -5,12 +5,16 @@ Explanation of how the the geolocation functions works step by step
 The geolocation function uses 2 out of 3 APIs that utilize the forward/inverse geocoding services to locate an address based on coordinates. Each API locates the same
 address and the two points with the minimum square distance between them are then used to calculate the coordinates of the mid-point. Next, it analyzes if the mid-point was calculated based on three edge cases that could indicate that the coordinates are not entirely correct. The first flag indicates if the minimum distance between the two selected points is greater than 20 km, the second flag indicates if the address is made of two or fewer administrative levels (ex. country, province), and the third flag indicates if the coordinates of the calculated mid-point are outside the country's boundary. Finally, for the first flag, the rgeoboudaries package is used to correct the mid-point coordinates by uploading the 2nd administrative level of the country in question and getting the coordinates of the city's centroid from the respective address.
 
+The order of administrative levels is always country-province-city-block (please see the figure below).
+![admin_level](https://github.com/user-attachments/assets/05314504-0c1f-4e9d-9b20-e65c1b0c246c)
+
 ```
 two_point<- function(data_base, #Database that contains the geographical information that needs to be geolocated 
                      country = TRUE, #A boolean input that indicates if you have the "country" variable and want to use it to geolocate an address
                      province = TRUE, #A boolean input that indicates if you have the "province" variable and want to use it to geolocate an address
                      city = TRUE, #A boolean input that indicates if you have the "city" variable and want to use it to geolocate an address
-                     district = FALSE) #A boolean input that indicates if you have the "district" variable and want to use it to geolocate an address
+                     block = FALSE, #A boolean input that indicates if you have the "block" variable and want to use it to geolocate an address
+                     filter_NA = TRUE){ #A boolean input that indicates if addresses that are not found should be filter out or not
 ```
 
 ## Example
@@ -31,11 +35,11 @@ test<- two_point(data_base = data)
 ### Step 1: Input check point
 This check point verifies that the inputs are correct, in case that they are not, the following message will appear:
 ```
-Please check that you have the following variables in the database: country, province, city, and district (if you indicated)
+Please check that you have the correct variables names in your data frame depending on the administrative levels you chose: country, province, city, block
 ```
 
 ### Step 2: Getting the administrative level fields to create the address
-Here the function determines if the inputs to be used as administrative levels are type string or factor: province, city and district. In case they are a factor, it extracts the label from them, if not, the value is maintained. The function will always use by default the administrative levels of country, province, city. But they can be switch off or you can even add the administrative level of district.
+Here the function determines if the inputs to be used as administrative levels are type string or factor: province, city and block (country should always be a string). In case they are a factor, it extracts the label from them, if not, the value is maintained. The function will always use by default the administrative levels of country, province, city. But they can be switch off or you can even add the administrative level of block.
 
 ![data_addr](https://github.com/user-attachments/assets/8a589438-50c9-43c4-a21a-819132f30bfa)
 
@@ -49,27 +53,39 @@ Passing 10 addresses to the Mapbox single address geocoder
 Passing 10 addresses to the TomTom batch geocoder
 Query completed in: 1.5 seconds
 ```
-Each API will locate the address and using the `st_distnace` function from the `sf` package, it will calculate the distance between each point. Then, with that distance we will calculate the mean square distance and select the two points who have the minimum value. By selecting these two points, we will next get the mid-point between them and obtain the coordinates.
+Please note that by default, the addresses that pass to the next step of measuring the distance between points are only the ones that are found in all three APIs, therefore, a message will always appear (unless `filter_NA = FALSE`) with the number of common adresses.
+```
+__ common addresses were located
+```
+Each API will then locate the address and using the `st_distnace` function from the `sf` package, it will calculate the distance between each point. Then, with that distance we will calculate the mean square distance and select the two points who have the minimum value. By selecting these two points, we will next get the mid-point between them and obtain the coordinates.
 
 ![mid-point](https://github.com/user-attachments/assets/378e672a-c6b5-4103-8e85-2b38cad64121)
 
 ### Step 4: Indicating flags
-With the final location indicated by the coordinates of the mid-point, we will now analyze if these were located correctly through three flags. The first flag will let us know if thw two points used to obtain the final coordinates had a distance greater than 20 km. The second flag, indicates if the final coordinates were located by using only two administrative levels, for example, country-province. The final flag will tell us if the final coordinates are most likely out of bounds from the country's boundary (over 3000 km away from the centroid of the country). All of these three flags are binary variables where 1 indicates the condition is true and 0 if not.
+With the final location indicated by the coordinates of the mid-point, we will now analyze if these were located correctly through three flags. The first flag will let us know if the two points used to obtain the final coordinates had a flat distance greater than 20 km. The second flag, indicates if the final coordinates were located by using only two administrative levels, for example, country-province. The final flag will tell us if the final coordinates and the two points used to obtain it are outside the boundary of the country using the geoboundaries country data. The first two flags are binary variables where 1 indicates the condition is true and 0 if not. The final flag is numeric with a value range between 0-3.
 
-![two_point](https://github.com/user-attachments/assets/871a13cd-9aa0-4da9-a2cf-bbae5e446ecd)
+![two_point](https://github.com/user-attachments/assets/6002ea11-239e-4e96-8ca1-5a4d4ce7d6c0)
 
 ### Step 5: Correcting 20 km flag
-In this last step of the function, rows who only had a 20 km flag raised will be corrected using the [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries) package that uses open data of geoboundaries. First, it will filter the cases that only have a 20 km flag, then it will modify any special characters from the address and obtain the last administrative level (by default it will be the city). Next, it will obtain the ISO code for the country, upload the 2-administrative level global data, filter the respective country and adjust the name of the 2-administartive level by removing any special character. Later, it will try to match the names of 2-administrative level boundaries with the names of the flagged cities (10% or less of the number of characters between the two strings can be different). After finding the matches, it will filter them, calculate the centroid of that 2-administrative level boundary and obtain its coordinates. With these, we use the ArcGIS API reverse geocoding service and obtain the address in order to match it with the actual address. In case they match (40% or less of the number of characters between the two strings can be different) then the mid-point's coordinates will now be replaced with the centroid's coordinates of the geoboudaries, if not, then the mid-point coordinates will remain. In case there was a replacement, the 20 km flag variable would change from 1 to 2, meaning that if the location was corrected it would be 2, if it was not then 1 and, if there was no flag to begin with it will remain 0.
+Since some locations have similar names even within the country, the APIs will no always locate correctly. Therefore, with the 20km flag it is easy to notice those cases and correct them if possible. For example, if in country A there is a province named B, and within that province we want to locate city F, but the city next to it has a street also named F, then some APIs could locate the wrong address. As a result, in this step of the function rows who only had a 20 km flag raised will be corrected using the [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries) package that uses open data from geoboundaries. The flowchart below will demosntrate each step of the correction process.
+![flow_chart_geo3](https://github.com/user-attachments/assets/3a82515d-ccaa-4109-85d5-7b6649f27ede)
 
-![final two_point](https://github.com/user-attachments/assets/ea0c13c1-e0bd-42c3-bd98-072e8a04c10a)
+Following this process, the following warning messages will appear depending on the case:
 
-We can see that from our example that even though we had three flagged cases of over 20 km, only two cases were corrected.
-
-In case the 2-administartive levels from the geoboundaries data does not match any city, no corrcetion will be done and the following message will appear:
-
+**_No 20 km flags or block = TRUE_**
 ```
-Warning: the geoboundaries correction is not possible for this country because of the 2nd level administrative level it uses
+Warning: If you indicated block to be taken into account, the 20 km flag cannot be corrected with level-2 geoboundaries global data
 ```
+**_ISO code was not located_**
+```
+Warning: the country does not have an ISO code thus, no correction for the 20 km flag was possible, please check the name
+```
+**_No matches found with 2-level boundary data_**
+```
+Warning: the geoboundaries correction is not possible for this country because of the 2nd administrative level it uses
+```
+The cases that were corrected can be seen in the _flag_20km_ column with a 2, in case it was not corrected it would remain a 1 and if there was no flag to begin with, then it will be a 0. We can see that from our example that even though we started with four flagged cases of over 20 km, only two of them were corrected.
+![final_two_point](https://github.com/user-attachments/assets/e2f265d5-0dfb-4a91-b15f-f3bb086ec00d)
 
 ### Step 6: Final result
 The final result that the function will return is a list of the following variables:
@@ -84,8 +100,11 @@ The final result that the function will return is a list of the following variab
 
 > [!IMPORTANT]
 >* Before applying this function, please make sure you have created an API key from the following applications: [MapBox](https://www.mapbox.com/) and [TomTom](https://www.tomtom.com/en_gb/navigation/)
+>* Please note that `province` could also be interpret as a State and `block` as a neighborhood
 >* The CRS used throughout the function is 4326 (WGS 84)
->* The function may stop for cases when any of the API do not find an address, because the `st_as_sf` function from the `sf` package cannot change NAs into coordinates
+>* The function may stop for cases when `filter_NA = FALSE`, because the `st_as_sf` function from the `sf` package cannot change NAs into coordinates since the API may not find the address
+>* Locations near the coast may have a value in _flag_box_ different from 0
+>* If your internet is not stable, then the function will stop and not work correctly 
 
 
 
