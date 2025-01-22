@@ -62,9 +62,9 @@ Each API will then locate the address and using the `st_distnace` function from 
 ![mid-point](https://github.com/user-attachments/assets/378e672a-c6b5-4103-8e85-2b38cad64121)
 
 ### Step 4: Indicating flags
-With the final location indicated by the coordinates of the mid-point, we will now analyze if these were located correctly through three flags. The first flag will let us know if the two points used to obtain the final coordinates had a flat distance greater than 20 km. The second flag, indicates if the final coordinates were located by using only two administrative levels, for example, country-province. The final flag will tell us if the final coordinates and the two points used to obtain it are outside the boundary of the country using the geoboundaries country data. The first two flags are binary variables where 1 indicates the condition is true and 0 if not. The final flag is numeric with a value range between 0-3.
+With the final location indicated by the coordinates of the mid-point, we will now analyze if these were located correctly through three flags. The first flag will let us know if the two points used to obtain the final coordinates had a flat distance greater than 20 km. The second flag, indicates if the final coordinates were located by using only two administrative levels, for example, country-province. The final flag will tell us if the final coordinates and the two points used to obtain it are outside the boundary of the country using the geoboundaries country data. The first two flags are binary variables where 1 indicates the condition is true and 0 if not, while the last one is numeric with a value range between 0-3. Additionally, two new coluns are created: `flag_isoa3` and `correct_20km`. These will help us express if any corrections were done for addresses with 20 km flags (by default their values are NA and 0 respectively). 
 
-![two_point](https://github.com/user-attachments/assets/6002ea11-239e-4e96-8ca1-5a4d4ce7d6c0)
+![two_point_new](https://github.com/user-attachments/assets/a0671a2c-7330-436d-8b6e-fe85b2939104)
 
 ### Step 5: Correcting 20 km flag
 Since some locations have similar names even within the country, the APIs will no always locate correctly. Therefore, with the 20km flag it is easy to notice those cases and correct them if possible. For example, if in country A there is a province named B, and within that province we want to locate city F, but the city next to it has a street also named F, then some APIs could locate the wrong address. As a result, in this step of the function rows who only had a 20 km flag raised will be corrected using the [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries) package that uses open data from geoboundaries. The flowchart below will demosntrate each step of the correction process.
@@ -84,19 +84,14 @@ Warning: the country does not have an ISO code thus, no correction for the 20 km
 ```
 Warning: the geoboundaries correction is not possible for this country because of the 2nd administrative level it uses
 ```
-The cases that were corrected can be seen in the _flag_20km_ column with a 2, in case it was not corrected it would remain a 1 and if there was no flag to begin with, then it will be a 0. We can see that from our example that even though we started with four flagged cases of over 20 km, only two of them were corrected.
-![final_two_point](https://github.com/user-attachments/assets/e2f265d5-0dfb-4a91-b15f-f3bb086ec00d)
+Lastly, when the iso code is found the `flag_isoa3` changes to 1 and 0 if not, while if the location was corrected for the 20 km flag then the column `correct_20km` changes to 1 and if no correction was done, then it will remain 0. We can see that from our example that we started with two flagged cases of over 20 km and both were corrected.
+
+![final_two_point_new](https://github.com/user-attachments/assets/d169f33e-c1eb-4460-8326-f3cd440f8ac2)
 
 ### Step 6: Final result
-The final result that the function will return is a list of the following variables:
-* addr (address)
-* p1 (point #1 used to calculate the mid-point)
-* p2 (point #2 used to calculate the mid-point)
-* latitude (from the mid-point)
-* longitude (from the mid-point)
-* flag_20km
-* flag_2_level
-* flag_box
+The final result that the function will return is a list of the following items:
+* **df:** a dataframe containing the variables of addr (address), p1 (point #1 used to calculate the mid-point), p2 (point #2 used to calculate the mid-point), latitude (from the mid-point), longitude (from the mid-point), flag_20km, flag_2_levl, flag_box, flag_isoa3, correct_20km
+* **fail_lookup:** a vector that contains the addresses that could not be located by **_all_** APIs 
 
 > [!IMPORTANT]
 >* Before applying this function, please make sure you have created an API key from the following applications: [MapBox](https://www.mapbox.com/) and [TomTom](https://www.tomtom.com/en_gb/navigation/)
