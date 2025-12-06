@@ -94,10 +94,14 @@ The final result that the function will return is a list of the following items:
 * **fail_lookup:** a vector that contains the addresses that could not be located by **_all_** APIs
 
 ### Common questions:
-- What if my data frame has multiple countries, can I apply the geolocation function? Yes, but you must first split that data frame by country `country_list <- split(df, df$country)`, then you can use a loop such as `result_list <- lapply(country_list, two_point)`
-- If my data frame made of multiple countries have different number of unique addresses and the sum surpass 550, will the function stop? No, think that as each country's addresses are being passed through the function it reset every time to zero for every case. So even of the sum of unique addrees surpass 550 it will not stop, but if one of the countries does have a value of over 550 then it will stop, so always make sure before applying
-- The function suddenly stopped and none of the warning signs indicating the specific error appear, what happened? Please make sure your internet is stable, the unique addreeses that being passes to dot surpass 550, that the `country` values are in english or that the `filter_NA` is not set to FALSE
-- Do all values need to be english in order for the question to work? No, only the `country` need to be in english, the `province, city or/and block` can be in other languages
+- What if my data frame has multiple countries, can I apply the geolocation function?
+  - Yes, but you must first split that data frame by country `country_list <- split(df, df$country)`, then you can use a loop such as `result_list <- lapply(country_list, two_point)`
+- If my data frame made of multiple countries have different number of unique addresses and the sum surpass 550, will the function stop?
+  - No, think as each country's addresses are being passed through the function it resets every time to zero for every case. So even if the sum of unique addresses surpass 550 it will not stop, but if one of the countries does have a value of over 550 then it will stop, so always make sure before applying
+- The function suddenly stopped and none of the warning signs indicating the specific error appear, what happened?
+  - Please make sure your internet is stable, the unique addresses that being passes to not surpass 550, that the `country` values are in english or that the `filter_NA` is not set to FALSE
+- Do all values need to be english in order for the question to work?
+  - No, only the `country` need to be in english, the `province, city or/and block` can be in other languages
 
 > [!IMPORTANT]
 >* Before applying this function, please make sure you have created an API key from the following applications: [MapBox](https://www.mapbox.com/) and [TomTom](https://www.tomtom.com/en_gb/navigation/)
