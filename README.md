@@ -17,7 +17,7 @@ two_point<- function(data_base, #Database that contains the geographical informa
 ```
 
 ## Example
-The following example will help us demonstrate step by step how the function works:
+The following example will help us demonstrate step by step how the function works (please note that you always have to make sure that df you pass as an input has the admin levels variables and the values in `country` are ALWAYS in english, the rest of the admin level variables can be in other languages):
 
 ```
 data<- data.frame(country = rep("Argentina", 10),
@@ -91,10 +91,18 @@ Lastly, when the iso code is found the `flag_isoa3` changes to 1 and 0 if not, w
 ### Step 6: Final result
 The final result that the function will return is a list of the following items:
 * **df:** a dataframe containing the variables of addr (address), p1 (point #1 used to calculate the mid-point), p2 (point #2 used to calculate the mid-point), latitude (from the mid-point), longitude (from the mid-point), flag_20km, flag_2_levl, flag_box, flag_isoa3, correct_20km
-* **fail_lookup:** a vector that contains the addresses that could not be located by **_all_** APIs 
+* **fail_lookup:** a vector that contains the addresses that could not be located by **_all_** APIs
+
+### Common questions:
+- What if my data frame has multiple countries, can I apply the geolocation function? Yes, but you must first split that data frame by country `country_list <- split(df, df$country)`, then you can use a loop such as `result_list <- lapply(country_list, two_point)`
+- If my data frame made of multiple countries have different number of unique addresses and the sum surpass 550, will the function stop? No, think that as each country's addresses are being passed through the function it reset every time to zero for every case. So even of the sum of unique addrees surpass 550 it will not stop, but if one of the countries does have a value of over 550 then it will stop, so always make sure before applying
+- The function suddenly stopped and none of the warning signs indicating the specific error appear, what happened? Please make sure your internet is stable, the unique addreeses that being passes to dot surpass 550, that the `country` values are in english or that the `filter_NA` is not set to FALSE
+- Do all values need to be english in order for the question to work? No, only the `country` need to be in english, the `province, city or/and block` can be in other languages
 
 > [!IMPORTANT]
 >* Before applying this function, please make sure you have created an API key from the following applications: [MapBox](https://www.mapbox.com/) and [TomTom](https://www.tomtom.com/en_gb/navigation/)
+>* If the unique addresses that are going to be geolocated surpass 550, then TomTom API will not be able to work correctly. So please verify the unique values you are going to pass by country
+>* ALWAYS remeber that the `country` values must be in english
 >* Please note that `province` could also be interpret as a State and `block` as a neighborhood
 >* The are three ways an address can be input: country-province, country-province-city (default), and country-province-city-block
 >* The CRS used throughout the function is 4326 (WGS 84)
